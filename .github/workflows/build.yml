@@ -34,34 +34,37 @@ jobs:
         Add-Content $env:GITHUB_PATH $sdkBin
         Write-Output "sdk bin: $sdkBin"
 
-    - name: Detect Visual Studio generator
+    - name: Detect Visual Studio
       shell: pwsh
       run: |
-        # Parse all available "Visual Studio XX YYYY" generators from cmake --help, pick the newest
-        $gens = (cmake --help) -join "`n" |
-          Select-String -AllMatches "Visual Studio \d+ \d{4}" |
-          ForEach-Object { $_.Matches.Value } | Sort-Object -Unique
-        if ($gens) {
-          # This project targets an older toolchain (spdlog 1.9.2, cryptopp with stdext iterators,
-        # older DirectXTK) - prefer VS 17 2022; fall back to newest available
-        if ($gens -contains "Visual Studio 17 2022") {
-          $gen = "Visual Studio 17 2022"
+        # Diagnostics: list actual installed VS instances
+        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        & $vswhere -all -products * -format value -property installationPath
+        Write-Output "---"
+        # cmake --help lists SUPPORTED generator names, not installed instances.
+        # Find the actually installed instance and map it to a generator name.
+        $ver = & $vswhere -latest -products * -property catalog_productLineVersion
+        Write-Output "installed productLine: $ver"
+        $yearMap = @{ '17' = '2022'; '18' = '2026' }
+        if ($ver -and $yearMap[$ver]) {
+          Add-Content $env:GITHUB_ENV "VS_GENERATOR=Visual Studio $ver $($yearMap[$ver])"
+          # Old deps (stdext iterators etc.) need the legacy v143 toolset (MSVC 2022 compiler)
+          Add-Content $env:GITHUB_ENV "VS_TOOLSET=v143"
+          Write-Output "selected: Visual Studio $ver $($yearMap[$ver]) with -T v143"
         } else {
-          $gen = $gens | Sort-Object { [int]($_ -replace 'Visual Studio (\d+) (\d+)','$2$1') } -Descending | Select-Object -First 1
-        }
-          Add-Content $env:GITHUB_ENV "VS_GENERATOR=$gen"
-          Write-Output "generators available: $($gens -join ', ')"
-          Write-Output "selected: $gen"
-        } else {
-          Write-Output "no VS generator found, will use cmake default"
           Add-Content $env:GITHUB_ENV "VS_GENERATOR="
+          Add-Content $env:GITHUB_ENV "VS_TOOLSET="
         }
 
     - name: Configure CMake
       shell: pwsh
       run: |
         if ($env:VS_GENERATOR) {
-          cmake -B build -G "$env:VS_GENERATOR" -A x64
+          if ($env:VS_TOOLSET) {
+            cmake -B build -G "$env:VS_GENERATOR" -A x64 -T $env:VS_TOOLSET
+          } else {
+            cmake -B build -G "$env:VS_GENERATOR" -A x64
+          }
         } else {
           cmake -B build -A x64
         }
