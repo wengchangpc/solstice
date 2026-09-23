@@ -1,0 +1,54 @@
+name: Build Solstice (Windows)
+
+on:
+  push:
+    branches: [ "main", "release" ]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install MinGW (provides ld.exe for resource embedding)
+      run: choco install mingw -y --no-progress
+
+    - name: Add ld.exe and fxc.exe to PATH
+      shell: pwsh
+      run: |
+        # MinGW binutils (ld) from chocolatey
+        $mingw = "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin"
+        if (Test-Path $mingw) { Add-Content $env:GITHUB_PATH $mingw; Write-Output "mingw ok: $mingw" }
+        else { Get-ChildItem "C:\ProgramData\chocolatey\lib\mingw" -Recurse -Filter "ld.exe" | Select-Object -First 1 -ExpandProperty DirectoryName | ForEach-Object { Add-Content $env:GITHUB_PATH $_; Write-Output "mingw found: $_" } }
+        # Windows SDK fxc.exe (HLSL shader compiler)
+        $sdk = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Directory |
+               Where-Object { $_.Name -match '^10\.' } |
+               Sort-Object { [version]$_.Name } -Descending |
+               Select-Object -First 1
+        $sdkBin = Join-Path $sdk.FullName "x64"
+        Add-Content $env:GITHUB_PATH $sdkBin
+        Write-Output "sdk bin: $sdkBin"
+
+    - name: Configure CMake
+      run: cmake -B build -G "Visual Studio 17 2022" -A x64
+
+    - name: Build
+      run: cmake --build build --config Release --parallel
+
+    - name: Locate outputs
+      shell: pwsh
+      run: Get-ChildItem -Recurse -Include *.dll,*.pdb build | Select-Object FullName, Length
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Solstice-Release-x64
+        path: |
+          build/Release/*.dll
+          build/Release/*.pdb
+        if-no-files-found: error

@@ -31,32 +31,38 @@ set(CMAKE_UNITY_BUILD TRUE)
 
 CPMAddPackage(
         NAME spdlog
-        SOURCE_DIR "D:/dev/deps/spdlog-1.9.2"
+        GITHUB_REPOSITORY gabime/spdlog
+        GIT_TAG v1.9.2
 )
 
 CPMAddPackage(
         NAME magic_enum
-        SOURCE_DIR "D:/dev/deps/magic_enum-0.9.5"
+        GITHUB_REPOSITORY Neargye/magic_enum
+        GIT_TAG v0.9.5
 )
 
 CPMAddPackage(
         NAME glm
-        SOURCE_DIR "D:/dev/deps/glm-1.0.1"
+        GITHUB_REPOSITORY g-truc/glm
+        GIT_TAG 1.0.1
 )
 
 CPMAddPackage(
         NAME nlohmann_json
-        SOURCE_DIR "D:/dev/deps/json-3.11.3"
+        GITHUB_REPOSITORY nlohmann/json
+        GIT_TAG v3.11.3
 )
 
 CPMAddPackage(
         NAME DirectXTK
-        SOURCE_DIR "D:/dev/deps/DirectXTK-main"
+        GITHUB_REPOSITORY microsoft/DirectXTK
+        GIT_TAG main
 )
 
 CPMAddPackage(
         NAME cryptopp-cmake
-        SOURCE_DIR "D:/dev/deps/cryptopp-cmake-master"
+        GITHUB_REPOSITORY abdes/cryptopp-cmake
+        GIT_TAG master
 )
 
 if(MSVC)
