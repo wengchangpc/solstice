@@ -34,8 +34,18 @@ jobs:
         Add-Content $env:GITHUB_PATH $sdkBin
         Write-Output "sdk bin: $sdkBin"
 
+    - name: Detect Visual Studio generator
+      shell: pwsh
+      run: |
+        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        $ver = & $vswhere -latest -property catalog_productLineVersion
+        $gen = "Visual Studio $ver 20$ver"
+        if (-not $ver) { $gen = "Visual Studio 17 2022" }
+        Add-Content $env:GITHUB_ENV "VS_GENERATOR=$gen"
+        Write-Output "generator: $gen"
+
     - name: Configure CMake
-      run: cmake -B build -G "Visual Studio 17 2022" -A x64
+      run: cmake -B build -G "$env:VS_GENERATOR" -A x64
 
     - name: Build
       run: cmake --build build --config Release --parallel
