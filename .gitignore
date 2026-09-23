@@ -1,0 +1,14 @@
+# Build directories
+out/
+build/
+cmake-build-*/
+
+# IDE
+.idea/
+.vs/
+.vscode/
+*.user
+
+# Compiled outputs
+*.dll
+*.pdb
