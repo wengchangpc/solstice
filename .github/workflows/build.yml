@@ -42,7 +42,13 @@ jobs:
           Select-String -AllMatches "Visual Studio \d+ \d{4}" |
           ForEach-Object { $_.Matches.Value } | Sort-Object -Unique
         if ($gens) {
+          # This project targets an older toolchain (spdlog 1.9.2, cryptopp with stdext iterators,
+        # older DirectXTK) - prefer VS 17 2022; fall back to newest available
+        if ($gens -contains "Visual Studio 17 2022") {
+          $gen = "Visual Studio 17 2022"
+        } else {
           $gen = $gens | Sort-Object { [int]($_ -replace 'Visual Studio (\d+) (\d+)','$2$1') } -Descending | Select-Object -First 1
+        }
           Add-Content $env:GITHUB_ENV "VS_GENERATOR=$gen"
           Write-Output "generators available: $($gens -join ', ')"
           Write-Output "selected: $gen"
